@@ -3,40 +3,45 @@ classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexin
     properties (Access=private)
         ContainedArray
     end
-    
+
     properties (Access=public)
         Parameters
         Dependency
         Label
+        Log
     end
-    
+
     methods
-         function obj=Dependent(varargin)
-            % X = dependent(VALUE,'param1',PARAM1,'param2',PARAM2,...)
-            if nargin>=1 %at least one argument
-                val = varargin{1};
-                if isnumeric(val) %determine whether vlaue is numeric array
-                    nbparams = length(size(val));
-                    obj.ContainedArray = val;
-                    if nargin == 1+2*nbparams
-                        obj.Parameters = struct([]);
-                        obj.Dependency = cell(1,nbparams);
-                        for k = 1:nbparams
-                            parametername = varargin{2*k};
-                            obj.Dependency{k} = parametername;
-                            indep = varargin{2*k+1};
-                            indep = indep(:);
-                            obj.Parameters(1).(parametername)=indep;
-                        end
-                    else
-                        error('Wrong number of input arguments');
-                    end
-                else
-                    error('Value must a numeric');
-                end
-            else
-                error('At east one argument must passed');
+        function obj=Dependent(ContainedArray, args)
+            % X = Dependent(VALUE, Parameters=struct('param1',PARAM1,'param2',PARAM2), ...)
+
+            arguments
+                ContainedArray  {mustBeNumeric}
+                args.Parameters struct
+                args.Label      (1,1) string = ""
+                args.Log        (1,1) string = ""
             end
+
+            % Validate Parameters struct
+            nbparams = ndims(ContainedArray);
+            fields = fieldnames(args.Parameters);
+            if ~(length(fields) == nbparams)
+                error('Wrong number of fields in argument Parameters');
+            end
+            for k = 1:length(fields)
+                indep=args.Parameters.(fields{k});
+                nbpts = size(ContainedArray,k);
+                if ~(size(indep) == [1, size(ContainedArray,k)])
+                    error("Parameter " + fields{k} + " must be row vectors with "+ nbpts + " elements");
+                end
+            end
+
+            % Fill attributes
+            obj.ContainedArray = ContainedArray;
+            obj.Dependency = fields;
+            obj.Parameters = args.Parameters;
+            obj.Label = args.Label;
+            obj.Log = args.Log;
         end
     end
 
@@ -57,7 +62,7 @@ classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexin
                 else
                     %just copy the references values (case of ':')
                     referencedindices_cell{k} = referencedvals;
-                end    
+                end
             end
             obj.ContainedArray = obj.ContainedArray(referencedindices_cell{:});
             if isscalar(indexOp)
@@ -127,11 +132,11 @@ classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexin
         function out = value(obj)
             out = obj.ContainedArray;
         end
-        
+
         function out = sum(obj)
             out = sum(obj.ContainedArray,"all");
         end
-        
+
         function out = cat(dim,varargin)
             numCatArrays = nargin-1;
             newArgs = cell(numCatArrays,1);
