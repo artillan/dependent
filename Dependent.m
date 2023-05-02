@@ -43,7 +43,32 @@ classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexin
             obj.Label = args.Label;
             obj.Log = args.Log;
         end
+
+        function obj=plot(obj)
+            deps = obj.Dependency;
+            if length(deps)==1
+                paramname = deps{1};
+                plot(obj.Parameters.paramname,obj.value);
+                xlabel(paramname);
+                ylabel(obj.Label);
+            elseif length(deps)==2
+                param1name = deps{1};
+                param2name = deps{2};
+                [X,Y] = meshgrid(obj.Parameters.(param1name), obj.Parameters.(param2name));
+                Z=obj.value.';
+                meshc(X,Y,Z);
+                xlabel(param1name);
+                ylabel(param2name);
+                zlabel(obj.Label);
+            else
+                warning('No plot function defined for Dependents with more than 2 parameters')
+            end
+
+        end
+
     end
+
+
 
     methods (Access=protected)
 
