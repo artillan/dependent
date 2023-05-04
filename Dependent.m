@@ -44,7 +44,16 @@ classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexin
             obj.Log = args.Log;
         end
 
-        function obj=plot(obj)
+        function s=dependent2struct(obj)
+            s = struct([]);
+            s(1).ContainedArray = obj.ContainedArray;
+            s(1).Parameters = obj.Parameters;
+            s(1).Dependency = obj.Dependency;
+            s(1).Label = obj.Label;
+            s(1).Log = obj.Log;
+        end
+        
+        function plot(obj)
             deps = obj.Dependency;
             if length(deps)==1
                 paramname = deps{1};
@@ -68,7 +77,15 @@ classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexin
 
     end
 
-
+    methods(Static)
+        function obj=struct2dependent(s)
+            obj=Dependent(s(1).ContainedArray, ...
+                Parameters = s(1).Parameters, ...
+                Dependency = s(1).Dependency, ...
+                Label = s(1).Label, ...
+                Log = s(1).Log);
+        end
+    end
 
     methods (Access=protected)
 
