@@ -53,7 +53,7 @@ classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexin
             s(1).Log = obj.Log;
         end
         
-        function plot(obj)
+        function plot(obj) 
             deps = obj.Dependency;
             if length(deps)==1
                 paramname = deps{1};
