@@ -12,7 +12,7 @@ classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexin
     end
 
     methods
-        function obj=Dependent(ContainedArray, args)
+        function obj=Dependent(ContainedArray, args) 
             % X = Dependent(VALUE, Parameters=struct('param1',PARAM1,'param2',PARAM2), ...)
 
             arguments
