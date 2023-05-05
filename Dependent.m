@@ -23,11 +23,12 @@ classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexin
             end
 
             % Validate Parameters struct
-            nbparams = ndims(ContainedArray);
             fields = fieldnames(args.Parameters);
-            if ~(length(fields) == nbparams)
-                error('Wrong number of fields in argument Parameters');
-            end
+            nbparams = length(fields);
+            %ndimensions = ndims(ContainedArray);
+%             if ~(length(fields) == nbparams)
+%                 error('Wrong number of fields in argument Parameters');
+%             end
             for k = 1:length(fields)
                 indep=args.Parameters.(fields{k});
                 nbpts = size(ContainedArray,k);
