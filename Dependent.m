@@ -25,9 +25,9 @@ classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexin
             % Validate Parameters struct
             nbparams = ndims(ContainedArray);
             fields = fieldnames(args.Parameters);
-            if ~(length(fields) == nbparams)
-                error('Wrong number of fields in argument Parameters');
-            end
+            %             if ~(length(fields) == nbparams)
+            %                 error('Wrong number of fields in argument Parameters');
+            %             end
             for k = 1:length(fields)
                 indep=args.Parameters.(fields{k});
                 nbpts = size(ContainedArray,k);
@@ -89,30 +89,109 @@ classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexin
 
     methods (Access=protected)
 
+        %*** Parenthesis **************************************************
+        function varargout = parenReference(obj, indexOp)
+            obj.ContainedArray = obj.ContainedArray.(indexOp(1));
+            Indices = indexOp(1).Indices;
+            
+            for k=1:length(Indices)
+                obj.Parameters.(obj.Dependency{k})=obj.Parameters.(obj.Dependency{k})(Indices{k});
+            end
+            if isscalar(indexOp)
+                varargout{1} = obj;
+            else
+                [varargout{1:nargout}] = obj.(indexOp(2:end));
+            end
+        end
+
+        function obj = parenAssign(obj,indexOp,varargin)
+
+            % A REPRENDRE !!!!
+            obj.ContainedArray.(indexOp(1))=varargin{1};
+
+
+            % Code d'origine!!!
+            %             % Ensure object instance is the first argument of call.
+            %             if isempty(obj)
+            %                 obj = varargin{1};
+            %             end
+            %             if isscalar(indexOp)
+            %                 assert(nargin==3);
+            %                 rhs = varargin{1};
+            %                 obj.ContainedArray.(indexOp) = rhs.ContainedArray;
+            %                 return;
+            %             end
+            %             [obj.(indexOp(2:end))] = varargin{:};
+        end
+
+        function n = parenListLength(obj,indexOp,ctx)
+            if numel(indexOp) <= 2
+                n = 1;
+                return;
+            end
+            containedObj = obj.(indexOp(1:2));
+            n = listLength(containedObj,indexOp(3:end),ctx);
+        end
+
+        function obj = parenDelete(obj,indexOp)
+            obj.ContainedArray.(indexOp) = [];
+        end
+
         %*** Braces *******************************************************
         function varargout = braceReference(obj,indexOp)
             referencedvals_cell = indexOp(1).Indices;
             referencedindices_cell = cell(size(referencedvals_cell)); %preallocation
-            for k = 1:length(referencedvals_cell)
-                referencedvals = referencedvals_cell{k};
+            for k1 = 1:length(referencedvals_cell)
+                referencedvals = referencedvals_cell{k1};
                 if isnumeric(referencedvals)
                     %find the indices corresponding to the references values
-                    parametername = obj.Dependency{k};
+                    parametername = obj.Dependency{k1};
                     parametervals = obj.Parameters.(parametername);
-                    [~,referencedindices] = intersect(parametervals, referencedvals,'stable');
-                    referencedindices_cell{k} = referencedindices;
-                else
-                    %just copy the references values (case of ':')
-                    referencedindices_cell{k} = referencedvals;
+                    referencedindices=[];
+                    for k2=1:length(referencedvals)
+                        for k3=1:length(parametervals)
+                            if abs(referencedvals(k2)-parametervals(k3))<=10*eps
+                                referencedindices = [referencedindices, k3];
+                            end
+                        end
+                    end
+                    referencedindices_cell{k1}=referencedindices;
+                else %(case of ':' in referencedvals)
+                    referencedindices_cell{k1} = referencedvals;
                 end
             end
+            Indices=referencedindices_cell;
+
             obj.ContainedArray = obj.ContainedArray(referencedindices_cell{:});
-            if isscalar(indexOp)
-                varargout{1} = obj.ContainedArray;
-                return;
+            for k1=1:length(referencedindices_cell)
+                if isnumeric(Indices{k1})
+                    obj.Parameters.(obj.Dependency{k1})=obj.Parameters.(obj.Dependency{k1})(Indices{k1});
+                else %(case of ':' in referencedvals)
+                    obj.Parameters.(obj.Dependency{k1})=obj.Parameters.(obj.Dependency{k1})
+                end
             end
-            [varargout{1:nargout}] = obj.(indexOp(2:end));
+            
+            if isscalar(indexOp)
+                varargout{1} = obj;
+            else
+                [varargout{1:nargout}] = obj.(indexOp(2:end));
+            end
+
+
+            %
+            %             if isscalar(indexOp)
+            %                 varargout{1} = obj.ContainedArray(referencedindices_cell{:});
+            %             else
+            %                 obj.ContainedArray = obj.ContainedArray(referencedindices_cell{:});
+            %                 for k1=1:length(referencedindices_cell)
+            %                     obj.Parameters.(obj.Dependency{k1})=obj.Parameters.(obj.Dependency{k1})(Indices{k1});
+            %                 end
+            %                 [varargout{1:nargout}] = obj.(indexOp(2:end));
+            %             end
+            
         end
+
+
 
         function obj = braceAssign(obj,indexOp,varargin)
             % TODO
@@ -132,47 +211,38 @@ classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexin
             n = listLength(containedObj,indexOp(3:end),ctx);
         end
 
-        %*** Parenthesis **************************************************
-        function varargout = parenReference(obj, indexOp)
-            obj.ContainedArray = obj.ContainedArray.(indexOp(1));
-            if isscalar(indexOp)
-                varargout{1} = obj.ContainedArray;
-                return;
-            end
-            [varargout{1:nargout}] = obj.(indexOp(2:end));
-        end
-
-        function obj = parenAssign(obj,indexOp,varargin)
-            % Ensure object instance is the first argument of call.
-            if isempty(obj)
-                obj = varargin{1};
-            end
-            if isscalar(indexOp)
-                assert(nargin==3);
-                rhs = varargin{1};
-                obj.ContainedArray.(indexOp) = rhs.ContainedArray;
-                return;
-            end
-            [obj.(indexOp(2:end))] = varargin{:};
-        end
-
-        function n = parenListLength(obj,indexOp,ctx)
-            if numel(indexOp) <= 2
-                n = 1;
-                return;
-            end
-            containedObj = obj.(indexOp(1:2));
-            n = listLength(containedObj,indexOp(3:end),ctx);
-        end
-
-        function obj = parenDelete(obj,indexOp)
-            obj.ContainedArray.(indexOp) = [];
-        end
     end
 
     methods (Access=public)
         function out = value(obj)
             out = obj.ContainedArray;
+        end
+
+        function out=squeeze(obj)
+            newParameters=struct([]);
+            knew=1;
+            for kold=1:size(obj.Dependency,1)
+                currentPARAM=obj.Parameters.(obj.Dependency{kold})(:).';
+
+                %if the parameter is not a singleton->copy it, 
+                % otherwise ->squeeze it
+                if length(currentPARAM)>=2
+                    newParameters(1).(obj.Dependency{kold})=currentPARAM;
+                    knew=knew+1;
+                end
+                out=Dependent(squeeze(obj.value), "Parameters", newParameters);
+            end
+        end
+
+        function out=new(obj)
+            newParameters=struct([]);
+            knew=1;
+            for kold=1:size(obj.Dependency,1)
+                currentPARAM=obj.Parameters.(obj.Dependency{kold})(:).';
+                newParameters(1).(obj.Dependency{kold})=currentPARAM;
+                knew=knew+1;
+                out=Dependent(obj.value, "Parameters", newParameters);
+            end
         end
 
         function out = sum(obj)
