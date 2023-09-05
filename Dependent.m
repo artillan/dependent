@@ -191,8 +191,6 @@ classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexin
             
         end
 
-
-
         function obj = braceAssign(obj,indexOp,varargin)
             % TODO
             %             if isscalar(indexOp)
