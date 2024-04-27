@@ -1,4 +1,4 @@
-classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexing.RedefinesBrace
+classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexing.RedefinesBrace
 
     properties (Access=private)
         ContainedArray
@@ -57,7 +57,7 @@ classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexin
             deps = obj.Dependency;
             if length(deps)==1
                 paramname = deps{1};
-                plot(obj.Parameters.paramname,obj.value);
+                plot(obj.Parameters.(paramname),obj.value);
                 xlabel(paramname);
                 ylabel(obj.Label);
             elseif length(deps)==2
@@ -91,16 +91,21 @@ classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexin
 
         %*** Parenthesis **************************************************
         function varargout = parenReference(obj, indexOp)
-            obj.ContainedArray = obj.ContainedArray.(indexOp(1));
-            Indices = indexOp(1).Indices;
             
-            for k=1:length(Indices)
-                obj.Parameters.(obj.Dependency{k})=obj.Parameters.(obj.Dependency{k})(Indices{k});
+            indices_cellarray = indexOp(1).Indices;
+
+            newobj = obj.new;
+            newobj.ContainedArray = obj.ContainedArray(indices_cellarray{:}); % obj.ContainedArray = obj.ContainedArray.(indexOp(1));
+            for k=1:length(indices_cellarray)
+                if isnumeric(indices_cellarray{k}) %test if the indices are an array of numeric (else is the case of ':', where parameters must not be modified)
+                    newobj.Parameters.(obj.Dependency{k})=obj.Parameters.(obj.Dependency{k})(indices_cellarray{k});
+                end
             end
+
             if isscalar(indexOp)
-                varargout{1} = obj;
+                varargout{1} = newobj;
             else
-                [varargout{1:nargout}] = obj.(indexOp(2:end));
+                [varargout{1:nargout}] = newobj.(indexOp(2:end));
             end
         end
 
@@ -138,11 +143,10 @@ classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexin
         end
 
         %*** Braces *******************************************************
-        function varargout = braceReference(obj,indexOp)
-            referencedvals_cell = indexOp(1).Indices;
-            referencedindices_cell = cell(size(referencedvals_cell)); %preallocation
-            for k1 = 1:length(referencedvals_cell)
-                referencedvals = referencedvals_cell{k1};
+        function indices_cellarray = values2indices(obj, values_cellarray)
+            indices_cellarray = cell(size(values_cellarray)); %preallocation
+            for k1 = 1:length(values_cellarray)
+                referencedvals = values_cellarray{k1};
                 if isnumeric(referencedvals)
                     %find the indices corresponding to the references values
                     parametername = obj.Dependency{k1};
@@ -155,43 +159,35 @@ classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexin
                             end
                         end
                     end
-                    referencedindices_cell{k1}=referencedindices;
+                    indices_cellarray{k1}=referencedindices;
                 else %(case of ':' in referencedvals)
-                    referencedindices_cell{k1} = referencedvals;
+                    indices_cellarray{k1} = referencedvals;
                 end
             end
-            Indices=referencedindices_cell;
+        end
 
-            obj.ContainedArray = obj.ContainedArray(referencedindices_cell{:});
-            for k1=1:length(referencedindices_cell)
-                if isnumeric(Indices{k1})
-                    obj.Parameters.(obj.Dependency{k1})=obj.Parameters.(obj.Dependency{k1})(Indices{k1});
-                else %(case of ':' in referencedvals)
-                    obj.Parameters.(obj.Dependency{k1})=obj.Parameters.(obj.Dependency{k1})
-                end
-            end
-            
+        function varargout = braceReference(obj,indexOp)
+            newobj = obj.new;
+            indices_cellarray = obj.values2indices(indexOp(1).Indices);
+
+            %Call parenReference code with the found indices
             if isscalar(indexOp)
-                varargout{1} = obj;
+                varargout{1} = newobj(indices_cellarray{:});
             else
-                [varargout{1:nargout}] = obj.(indexOp(2:end));
+                [varargout{1:nargout}] = newobj(indices_cellarray{:}).(indexOp(2:end)); %NON TESTE
             end
-
-
-            %
-            %             if isscalar(indexOp)
-            %                 varargout{1} = obj.ContainedArray(referencedindices_cell{:});
-            %             else
-            %                 obj.ContainedArray = obj.ContainedArray(referencedindices_cell{:});
-            %                 for k1=1:length(referencedindices_cell)
-            %                     obj.Parameters.(obj.Dependency{k1})=obj.Parameters.(obj.Dependency{k1})(Indices{k1});
-            %                 end
-            %                 [varargout{1:nargout}] = obj.(indexOp(2:end));
-            %             end
-            
         end
 
         function obj = braceAssign(obj,indexOp,varargin)
+            indices_cellarray = obj.values2indices(indexOp(1).Indices);
+
+            %Call parenAssign code with the found indices
+            if isscalar(indexOp)
+                obj(indices_cellarray{:}) = varargin{1};
+            else
+                obj(indices_cellarray{:}).(indexOp(2:end)) = varargin{1:nargin};
+            end
+
             % TODO
             %             if isscalar(indexOp)
             %                 [obj.Arrays.(indexOp)] = varargin{:};
@@ -261,17 +257,40 @@ classdef Dependent < matlab.mixin.indexing.RedefinesParen & matlab.mixin.indexin
         end
 
         function varargout = size(obj,varargin)
-            [varargout{1:nargout}] = size(obj.ContainedArray,varargin{:});
+            %the computation of the size is modified to take singleton
+            %dimensions (now size can be 3x4x1x1)
+            siz = size(obj.ContainedArray,varargin{:});
+            modifiedsiz = ones(1, length(fieldnames(obj.Parameters)));
+            modifiedsiz(1:length(siz))=siz;
+            [varargout{1:nargout}] = modifiedsiz;
+        end
+
+        function obj = renameParameter(obj,oldparametername,newparametername)
+            paramindex=find(strcmp(obj.Dependency,oldparametername),1);
+            if ~isempty(paramindex)
+                obj.Parameters = renameStructField(obj.Parameters,oldparametername,newparametername);
+                obj.Dependency{paramindex}=newparametername;
+            else
+                error(oldparametername)
+            end
         end
     end
 
     methods (Static, Access=public)
-        function obj = empty()
-            obj = ArrayWithLabel([]);
+        function obj = empty(args)
+            % d = Dependent.empty(Parameters = struct("p1", [1, 2], "p2", [10, 20, 30]));
+            arguments
+                args.Parameters = struct([]);
+            end
+            fnames = fieldnames(args.Parameters);
+            n = length(fnames);
+            sz = nan(1,n);
+            for k = 1:n
+                sz(k) = length(args.Parameters.(fnames{k}));
+            end
+            
+            obj = Dependent(nan(sz), Parameters=args.Parameters);
         end
     end
 end
-
-
-
 

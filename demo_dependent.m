@@ -6,10 +6,26 @@ myA = Dependent(A, ...
     Label = 'test', ...
     Log = 'IFbandwith:100kHz\nPower:-20dBm');
 
+
+% read
 myA
-myA(1,2:3,:)
+myA(1,2:3,1).value
+
+myA(1,2:3,:).value
+myA(1,2:3,:).squeeze.value
+
 myA{10,200:300,:}
 myA.value
 myA.Parameters
 myA.Dependency
 myA.Label
+
+%write
+myA(1,2,1).value
+myA(1,2,1)=6;
+myA(1,2,1).value
+
+
+myA(1,2:3,1).value
+myA(1,2:3,1)=[5,4];
+myA(1,2:3,1).value
