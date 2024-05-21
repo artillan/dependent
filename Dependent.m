@@ -281,6 +281,7 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
             % d = Dependent.empty(Parameters = struct("p1", [1, 2], "p2", [10, 20, 30]));
             arguments
                 args.Parameters = struct([]);
+                args.Label = "";
             end
             fnames = fieldnames(args.Parameters);
             n = length(fnames);
@@ -289,7 +290,7 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
                 sz(k) = length(args.Parameters.(fnames{k}));
             end
             
-            obj = Dependent(nan(sz), Parameters=args.Parameters);
+            obj = Dependent(nan(sz), Parameters=args.Parameters, Label=args.Label);
         end
     end
 end
