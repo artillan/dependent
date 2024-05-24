@@ -224,7 +224,7 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
                     newParameters(1).(obj.Dependency{kold})=currentPARAM;
                     knew=knew+1;
                 end
-                out=Dependent(squeeze(obj.value), "Parameters", newParameters);
+                out=Dependent(squeeze(obj.value), "Parameters", newParameters, "Label", obj.Label);
             end
         end
 
@@ -235,7 +235,7 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
                 currentPARAM=obj.Parameters.(obj.Dependency{kold})(:).';
                 newParameters(1).(obj.Dependency{kold})=currentPARAM;
                 knew=knew+1;
-                out=Dependent(obj.value, "Parameters", newParameters);
+                out=Dependent(obj.value, "Parameters", newParameters, "Label", obj.Label);
             end
         end
 
