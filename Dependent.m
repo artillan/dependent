@@ -290,7 +290,13 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
                 sz(k) = length(args.Parameters.(fnames{k}));
             end
             
-            obj = Dependent(nan(sz), Parameters=args.Parameters, Label=args.Label);
+            if n==1
+                array = nan(sz(1),1);
+            else
+                array = nan(sz);
+            end
+
+            obj = Dependent(array, Parameters=args.Parameters, Label=args.Label);
         end
     end
 end
