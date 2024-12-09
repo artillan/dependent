@@ -266,6 +266,11 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
         end
 
         function obj = renameParameter(obj,oldparametername,newparametername)
+            arguments
+                obj 
+                oldparametername 
+                newparametername 
+            end
             paramindex=find(strcmp(obj.Dependency,oldparametername),1);
             if ~isempty(paramindex)
                 obj.Parameters = renameStructField(obj.Parameters,oldparametername,newparametername);
