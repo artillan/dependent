@@ -6,9 +6,12 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
 
     properties (Access=public)
         Parameters
-        Dependency
         Label
         Log
+    end
+
+    properties (Dependent, Access=public)
+        Dependency  
     end
 
     methods
@@ -38,17 +41,19 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
 
             % Fill attributes
             obj.ContainedArray = ContainedArray;
-            obj.Dependency = fields;
             obj.Parameters = args.Parameters;
             obj.Label = args.Label;
             obj.Log = args.Log;
+        end
+
+        function value = get.Dependency(obj)
+            value = fieldnames(obj.Parameters);
         end
 
         function s=dependent2struct(obj)
             s = struct([]);
             s(1).ContainedArray = obj.ContainedArray;
             s(1).Parameters = obj.Parameters;
-            s(1).Dependency = obj.Dependency;
             s(1).Label = obj.Label;
             s(1).Log = obj.Log;
         end
@@ -91,7 +96,6 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
         function obj=struct2dependent(s)
             obj=Dependent(s(1).ContainedArray, ...
                 Parameters = s(1).Parameters, ...
-                Dependency = s(1).Dependency, ...
                 Label = s(1).Label, ...
                 Log = s(1).Log);
         end
