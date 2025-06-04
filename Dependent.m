@@ -23,7 +23,7 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
             end
 
             % Validate Parameters struct
-            nbparams = ndims(ContainedArray);
+            %nbparams = ndims(ContainedArray);
             fields = fieldnames(args.Parameters);
             %             if ~(length(fields) == nbparams)
             %                 error('Wrong number of fields in argument Parameters');
@@ -52,10 +52,10 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
             s(1).Label = obj.Label;
             s(1).Log = obj.Log;
         end
-        
+
         function plot(obj)
             deps = obj.Dependency;
-            if length(deps)==1
+            if isscalar(deps)
                 paramname = deps{1};
                 plot(obj.Parameters.(paramname),obj.value);
                 xlabel(paramname);
@@ -73,6 +73,16 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
                 warning('No plot function defined for Dependents with more than 2 parameters')
             end
 
+        end
+
+        function json = jsonencode(obj, varargin)
+            %s = struct("Name", obj.Name, "Age", obj.Age);
+            s = struct(...
+                "Parameters", obj.Parameters, ...
+                "ContainedArray", obj.ContainedArray, ...
+                "Label", obj.Label, ...
+                "Log", obj.Log);
+            json = jsonencode(s, varargin{:});
         end
 
     end
@@ -235,8 +245,20 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
                 currentPARAM=obj.Parameters.(obj.Dependency{kold})(:).';
                 newParameters(1).(obj.Dependency{kold})=currentPARAM;
                 knew=knew+1;
-                out=Dependent(obj.value, "Parameters", newParameters, "Label", obj.Label);
             end
+            out=Dependent(obj.value, "Parameters", newParameters, "Label", obj.Label);
+        end
+
+        function out=eval(obj, func)
+            % EVAL applies the function fun to each element of the Dependent.
+            newParameters=struct([]);
+            knew=1;
+            for kold=1:size(obj.Dependency,1)
+                currentPARAM=obj.Parameters.(obj.Dependency{kold})(:).';
+                newParameters(1).(obj.Dependency{kold})=currentPARAM;
+                knew=knew+1;
+            end
+            out=Dependent(func(obj.value), "Parameters", newParameters, "Label", "");
         end
 
         function out = sum(obj)
@@ -279,6 +301,24 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
                 error(oldparametername)
             end
         end
+
+        function result=rdivide(DepL, DepR)
+            %   nwR = nwL\nwT     left deembedding (T=T1\T2)
+             
+            if isa(DepL, 'Dependent') && isa(DepR, 'Dependent')
+                newParameters=struct([]);
+                knew=1;
+                for kold=1:size(DepL.Dependency,1)
+                    currentPARAM=DepL.Parameters.(DepL.Dependency{kold})(:).';
+                    newParameters(1).(DepL.Dependency{kold})=currentPARAM;
+                    knew=knew+1;
+                end
+                result=Dependent(DepL.value./DepR.value, "Parameters", newParameters, "Label", "");
+
+            else
+                error('rdivide not defined for these two types of networks');
+            end
+        end
     end
 
     methods (Static, Access=public)
@@ -304,5 +344,7 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
             obj = Dependent(array, Parameters=args.Parameters, Label=args.Label);
         end
     end
+
+    
 end
 
