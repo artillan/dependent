@@ -35,6 +35,10 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
                 indep=args.Parameters.(fields{k});
                 nbpts = size(ContainedArray,k);
                 if ~(size(indep) == [1, size(ContainedArray,k)])
+                    if ~(size(indep) == [size(ContainedArray,k),1])
+                        indep=indep.';
+                    end
+                else
                     error("Parameter " + fields{k} + " must be row vectors with "+ nbpts + " elements");
                 end
             end
@@ -80,19 +84,30 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
 
         end
 
-        function json = jsonencode(obj, varargin)
+        function jsonStr = jsonencode(obj, varargin)
             %s = struct("Name", obj.Name, "Age", obj.Age);
             s = struct(...
                 "Parameters", obj.Parameters, ...
                 "ContainedArray", obj.ContainedArray, ...
                 "Label", obj.Label, ...
                 "Log", obj.Log);
-            json = jsonencode(s, varargin{:});
+            jsonStr = jsonencode(s, varargin{:});
         end
 
     end
 
     methods(Static)
+
+        function obj = jsondecode(jsonStr, varargin)
+
+            jsonData = jsondecode(jsonStr, varargin{:});
+
+            obj=Dependent(jsonData.ContainedArray, ...
+                Parameters = jsonData.Parameters, ...
+                Label = jsonData.Label, ...
+                Log = jsonData.Log);
+        end
+
         function obj=struct2dependent(s)
             obj=Dependent(s(1).ContainedArray, ...
                 Parameters = s(1).Parameters, ...
