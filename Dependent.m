@@ -34,12 +34,12 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
             for k = 1:length(fields)
                 indep=args.Parameters.(fields{k});
                 nbpts = size(ContainedArray,k);
-                if ~(size(indep) == [1, size(ContainedArray,k)])
-                    if ~(size(indep) == [size(ContainedArray,k),1])
+                if ~(size(indep) == [1, nbpts])
+                    if (size(indep) == [nbpts, 1])
                         indep=indep.';
+                    else
+                        error("Parameter " + fields{k} + " must be row vectors with "+ nbpts + " elements");
                     end
-                else
-                    error("Parameter " + fields{k} + " must be row vectors with "+ nbpts + " elements");
                 end
             end
 
@@ -54,13 +54,13 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
             value = fieldnames(obj.Parameters);
         end
 
-        function s=dependent2struct(obj)
-            s = struct([]);
-            s(1).ContainedArray = obj.ContainedArray;
-            s(1).Parameters = obj.Parameters;
-            s(1).Label = obj.Label;
-            s(1).Log = obj.Log;
-        end
+        % function s=dependent2struct(obj)
+        %     s = struct([]);
+        %     s(1).ContainedArray = obj.ContainedArray;
+        %     s(1).Parameters = obj.Parameters;
+        %     s(1).Label = obj.Label;
+        %     s(1).Log = obj.Log;
+        % end
 
         function plot(obj)
             deps = obj.Dependency;
@@ -86,11 +86,21 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
 
         function jsonStr = jsonencode(obj, varargin)
             %s = struct("Name", obj.Name, "Age", obj.Age);
-            s = struct(...
-                "Parameters", obj.Parameters, ...
-                "ContainedArray", obj.ContainedArray, ...
-                "Label", obj.Label, ...
-                "Log", obj.Log);
+
+            if isreal(obj.ContainedArray)
+                s = struct(...
+                    "Parameters", obj.Parameters, ...
+                    "ContainedArray", obj.ContainedArray, ...
+                    "Label", obj.Label, ...
+                    "Log", obj.Log);
+            else
+                s = struct(...
+                    "Parameters", obj.Parameters, ...
+                    "ContainedArrayRe", real(obj.ContainedArray), ...
+                    "ContainedArrayIm", imag(obj.ContainedArray), ...
+                    "Label", obj.Label, ...
+                    "Log", obj.Log);
+            end
             jsonStr = jsonencode(s, varargin{:});
         end
 
@@ -99,16 +109,30 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
     methods(Static)
 
         function obj = jsondecode(jsonStr, varargin)
-
+            % arguments
+            %     jsonStr string
+            % end
             jsonData = jsondecode(jsonStr, varargin{:});
+            obj=struct2dependent(jsonData);
 
-            obj=Dependent(jsonData.ContainedArray, ...
-                Parameters = jsonData.Parameters, ...
-                Label = jsonData.Label, ...
-                Log = jsonData.Log);
         end
 
-        function obj=struct2dependent(s)
+        function obj=struct2dependent(inputstruct)
+            arguments
+                inputstruct (1,1) struct
+            end
+
+            if isfield(inputstruct, "ContainedArray")   %real values
+                s(1).ContainedArray = inputstruct.ContainedArray;
+                
+            elseif (isfield(inputstruct, "ContainedArrayRe") && isfield(inputstruct, "ContainedArrayIm")) %complex values
+                s(1).ContainedArray = complex(inputstruct.ContainedArrayRe, inputstruct.ContainedArrayIm);
+            end
+            s(1).Parameters = inputstruct.Parameters;
+            s(1).Label = inputstruct.Label;
+            s(1).Log = inputstruct.Log;
+
+
             obj=Dependent(s(1).ContainedArray, ...
                 Parameters = s(1).Parameters, ...
                 Label = s(1).Label, ...
