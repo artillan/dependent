@@ -104,7 +104,7 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
             jsonStr = jsonencode(s, varargin{:});
         end
 
-        function writejson(obj, filename)
+        function jsonwrite(obj, filename)
             arguments
                 obj
                 filename string
@@ -148,7 +148,7 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
                 Log = s(1).Log);
         end
 
-        function obj = readjson(filename)
+        function obj = jsonread(filename)
             arguments
                 filename string
             end

@@ -41,26 +41,43 @@ A(1,2:3,1)=[5,4];
 A(1,2:3,1).value
 
 %% read and write a Dependent (json format)
-A.writejson('A.json');
-AA = Dependent.readjson('A.json');
+A.jsonwrite('A.json');
+AA = Dependent.jsonread('A.json');
 
-B.writejson('B.json');
-BB = Dependent.readjson('B.json');
+B.jsonwrite('B.json');
+BB = Dependent.jsonread('B.json');
 
 %% struct of dependents
 DATA.A=A;
 DATA.B=B;
 
 %%
-writedependentblock(jsonFileName, DATA);
-% % % 
-% % % FileName = "IV";
-% % % % FileName = "CW_freqswpXS_thetaswp_phiswp";
-% % % 
-% % % matFileName = FileName+".mat";
-% % % load(matFileName, "DATA");
-% % % 
-% % % jsonFileName = FileName+".json";
-% % % writedependentblock(jsonFileName, DATA);
-% % % 
-% % % MEAS2 = readdependentblock(jsonFileName);
+jsonwritedependentstruct("DATA.json", DATA);
+DDATA = jsonreadreaddependentstruct("DATA.json");
+
+function jsonwritedependentstruct(jsonfilename, dependentstruct)
+arguments
+    jsonfilename string
+    dependentstruct struct
+end
+fid = fopen(jsonfilename,'w');
+fprintf(fid,'%s',jsonencode(dependentstruct));
+fclose(fid);
+end
+
+function dependentstruct = jsonreadreaddependentstruct(jsonfilename)
+arguments
+    jsonfilename string
+end
+fid = fopen(jsonfilename);
+raw = fread(fid,inf);
+fclose(fid);
+
+str = char(raw');
+structdata = jsondecode(str);
+for field = fieldnames(structdata).'
+    field = field{1};
+    dependentstruct.(field) = Dependent.struct2dependent(structdata.(field));
+end
+end
+
