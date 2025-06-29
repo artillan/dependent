@@ -104,6 +104,16 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
             jsonStr = jsonencode(s, varargin{:});
         end
 
+        function writejson(obj, filename)
+            arguments
+                obj
+                filename string
+            end
+            fid = fopen(filename,'w');
+            fprintf(fid,'%s',obj.jsonencode);
+            fclose(fid);
+        end
+
     end
 
     methods(Static)
@@ -113,8 +123,7 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
             %     jsonStr string
             % end
             jsonData = jsondecode(jsonStr, varargin{:});
-            obj=struct2dependent(jsonData);
-
+            obj=Dependent.struct2dependent(jsonData);
         end
 
         function obj=struct2dependent(inputstruct)
@@ -138,6 +147,18 @@ classdef Dependent < handle & matlab.mixin.indexing.RedefinesParen & matlab.mixi
                 Label = s(1).Label, ...
                 Log = s(1).Log);
         end
+
+        function obj = readjson(filename)
+            arguments
+                filename string
+            end
+            fid = fopen(filename);
+            raw = fread(fid,inf);
+            str = char(raw');
+            fclose(fid);
+            obj = Dependent.jsondecode(str);
+        end
+
     end
 
     methods (Access=protected)
