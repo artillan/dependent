@@ -52,32 +52,5 @@ DATA.A=A;
 DATA.B=B;
 
 %%
-jsonwritedependentstruct("DATA.json", DATA);
-DDATA = jsonreadreaddependentstruct("DATA.json");
-
-function jsonwritedependentstruct(jsonfilename, dependentstruct)
-arguments
-    jsonfilename string
-    dependentstruct struct
-end
-fid = fopen(jsonfilename,'w');
-fprintf(fid,'%s',jsonencode(dependentstruct));
-fclose(fid);
-end
-
-function dependentstruct = jsonreadreaddependentstruct(jsonfilename)
-arguments
-    jsonfilename string
-end
-fid = fopen(jsonfilename);
-raw = fread(fid,inf);
-fclose(fid);
-
-str = char(raw');
-structdata = jsondecode(str);
-for field = fieldnames(structdata).'
-    field = field{1};
-    dependentstruct.(field) = Dependent.struct2dependent(structdata.(field));
-end
-end
-
+writedependents(DATA, "DATA.json");
+DDATA = readdependents("DATA.json");
